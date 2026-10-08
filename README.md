@@ -20,7 +20,7 @@ django-filter · django-cors-headers · WhiteNoise + Gunicorn · GitHub Actions
   - cancelled slots become bookable again
 - **Dashboard:** patient count, today's appointments, counts by status, next 5 upcoming
 - Pagination, search, filtering (`status`, `doctor`, `patient`, `date_from`, `date_to`) and ordering
-- 27 automated tests, run in CI on every push
+- 30 automated tests, run in CI on every push
 
 ## Setup
 ```bash
@@ -81,7 +81,7 @@ clinic/
 ├── views.py         viewsets, status actions, dashboard
 ├── permissions.py   IsAdminOrReadOnly
 ├── filters.py       appointment filters
-└── tests/           27 tests
+└── tests/           30 tests
 ```
 
 ## Deployment (e.g. Render)
@@ -98,6 +98,20 @@ clinic/
 - This is a portfolio project. It is not designed or certified for real patient data (no audit logging, field encryption,
   or HIPAA-style controls).
 
+## Adding doctors and patients
+
+**Patients** (any user): sign in, open **Patients**, click **Add patient**. Each user only sees the patients they created.
+
+**Doctors** (admin only): doctors are shared by everyone, so only staff accounts can add or edit them.
+1. Create an admin once: `python manage.py createsuperuser`
+2. Sign in to the web app with that account. A **Doctors** page with an **Add doctor** button appears
+   (regular users see the list, read-only).
+3. Optional: `python manage.py seed_doctors` adds 5 sample doctors.
+
+You can also manage everything at `/admin/`. Doctors with appointments can't be deleted; mark them inactive instead.
+To turn an existing user into an admin: `python manage.py shell` then
+`from django.contrib.auth import get_user_model as g; u=g().objects.get(username="asha"); u.is_staff=True; u.save()`
+
 ## Frontend (React + Vite)
 ```bash
 cd frontend
@@ -105,6 +119,6 @@ cp .env.example .env      # VITE_API_URL=http://localhost:8000/api
 npm install
 npm run dev               # http://localhost:5173
 ```
-Pages: login/register, dashboard, patients (search, add, edit, delete), appointments (book, filter, complete, cancel).
-Booking conflicts from the API are shown inline. Doctors are added by an admin at `/admin/`.
+Pages: login/register, dashboard, patients, doctors, appointments. Forms open in dialogs, destructive actions ask for
+confirmation, and booking conflicts from the API are shown inline.
 For production, set `CORS_ALLOWED_ORIGINS` on the backend to your frontend URL, and `VITE_API_URL` on the frontend to the backend URL.

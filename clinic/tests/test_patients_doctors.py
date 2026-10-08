@@ -64,3 +64,27 @@ class DoctorTests(APITestCase):
             "name": "Sen", "specialization": "ENT", "email": "sen@example.com",
         })
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+
+class DoctorStaffTests(APITestCase):
+    def test_staff_can_create_update_and_toggle_active(self):
+        self.client.force_authenticate(make_user("admin", staff=True))
+        res = self.client.post("/api/doctors/", {
+            "name": "Sen", "specialization": "ENT", "email": "sen@example.com",
+        })
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        res = self.client.patch(f"/api/doctors/{res.data['id']}/", {"is_active": False})
+        self.assertFalse(res.data["is_active"])
+
+    def test_deleting_doctor_with_appointments_returns_400_not_500(self):
+        from clinic.models import Appointment
+        from .helpers import future_slot
+        user = make_user("admin", staff=True)
+        doctor = make_doctor()
+        Appointment.objects.create(
+            patient=make_patient(user), doctor=doctor, scheduled_at=future_slot(),
+            reason="Checkup", created_by=user,
+        )
+        self.client.force_authenticate(user)
+        res = self.client.delete(f"/api/doctors/{doctor.id}/")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

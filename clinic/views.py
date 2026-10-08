@@ -1,7 +1,9 @@
 from django.db.models import Count
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
+from django.db.models import ProtectedError
 from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,8 +29,33 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         token, _ = Token.objects.get_or_create(user=user)
         return Response(
-            {"token": token.key, "user": {"id": user.id, "username": user.username, "email": user.email}},
+            {
+                "token": token.key,
+                "user": {
+                    "id": user.id, "username": user.username,
+                    "email": user.email, "is_staff": user.is_staff,
+                },
+            },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class LoginView(ObtainAuthToken):
+    """Same as DRF's token login, but also tells the UI who the user is."""
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            {
+                "token": token.key,
+                "user": {
+                    "id": user.id, "username": user.username,
+                    "email": user.email, "is_staff": user.is_staff,
+                },
+            }
         )
 
 
@@ -59,6 +86,15 @@ class DoctorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
     search_fields = ["name", "specialization"]
     filterset_fields = ["specialization", "is_active"]
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {"detail": "This doctor has appointments and cannot be deleted. Mark them inactive instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class AppointmentViewSet(OwnedQuerysetMixin, viewsets.ModelViewSet):

@@ -40,3 +40,8 @@ class AuthTests(APITestCase):
     def test_endpoints_require_authentication(self):
         for url in ["/api/patients/", "/api/appointments/", "/api/doctors/", "/api/dashboard/"]:
             self.assertEqual(self.client.get(url).status_code, status.HTTP_401_UNAUTHORIZED, url)
+
+    def test_login_reports_staff_flag(self):
+        make_user("boss", staff=True)
+        res = self.client.post("/api/auth/login/", {"username": "boss", "password": "StrongPass#123"})
+        self.assertTrue(res.data["user"]["is_staff"])

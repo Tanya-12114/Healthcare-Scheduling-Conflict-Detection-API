@@ -1,11 +1,11 @@
 from django.urls import include, path
-from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
 
 from .views import (
     AppointmentViewSet,
     DashboardView,
     DoctorViewSet,
+    LoginView,
     PatientViewSet,
     RegisterView,
 )
@@ -17,7 +17,7 @@ router.register("appointments", AppointmentViewSet, basename="appointment")
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
-    path("auth/login/", obtain_auth_token, name="login"),
+    path("auth/login/", LoginView.as_view(), name="login"),
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("", include(router.urls)),
 ]
