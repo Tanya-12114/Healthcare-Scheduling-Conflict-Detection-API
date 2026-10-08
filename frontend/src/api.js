@@ -24,6 +24,7 @@ export const session = {
     localStorage.setItem("user", res.user?.username || username);
     localStorage.setItem("staff", res.user?.is_staff ? "1" : "");
   },
+  makeStaff: () => localStorage.setItem("staff", "1"),
   isStaff: () => localStorage.getItem("staff") === "1",
   name: () => localStorage.getItem("user") || "",
 };

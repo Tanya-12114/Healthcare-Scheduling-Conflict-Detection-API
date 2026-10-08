@@ -45,3 +45,29 @@ class AuthTests(APITestCase):
         make_user("boss", staff=True)
         res = self.client.post("/api/auth/login/", {"username": "boss", "password": "StrongPass#123"})
         self.assertTrue(res.data["user"]["is_staff"])
+
+
+class BecomeAdminTests(APITestCase):
+    def setUp(self):
+        self.user = make_user("alice")
+        self.client.force_authenticate(self.user)
+
+    def test_disabled_when_no_code_configured(self):
+        res = self.client.post("/api/auth/become-admin/", {"code": "anything"})
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_staff)
+
+    def test_wrong_code_rejected(self):
+        with self.settings(ADMIN_SIGNUP_CODE="s3cret"):
+            res = self.client.post("/api/auth/become-admin/", {"code": "nope"})
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_staff)
+
+    def test_correct_code_promotes_user(self):
+        with self.settings(ADMIN_SIGNUP_CODE="s3cret"):
+            res = self.client.post("/api/auth/become-admin/", {"code": "s3cret"})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_staff)

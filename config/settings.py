@@ -97,7 +97,12 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 
+# Secret code that lets a signed-in user promote themselves to admin from the app.
+# Empty (default) = feature disabled.
+ADMIN_SIGNUP_CODE = os.environ.get("ADMIN_SIGNUP_CODE", "")
+
 REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_RATES": {"admin_code": "10/hour"},
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],

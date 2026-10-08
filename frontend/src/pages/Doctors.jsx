@@ -14,6 +14,8 @@ export default function Doctors() {
   const [form, setForm] = useState(null);
   const [del, setDel] = useState(null);
   const [error, setError] = useState("");
+  const [code, setCode] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
 
   const load = useCallback(() => {
     api(`/doctors/?page=${page}&page_size=${SIZE}&search=${encodeURIComponent(q)}`).then(setData).catch((e) => toast(e.message, "err"));
@@ -30,6 +32,17 @@ export default function Doctors() {
       toast(form.id ? "Doctor updated" : "Doctor added");
       setForm(null); load();
     } catch (err) { setError(err.message); }
+  }
+
+  async function becomeAdmin(e) {
+    e.preventDefault();
+    setCodeBusy(true);
+    try {
+      await api("/auth/become-admin/", { method: "POST", body: { code } });
+      session.makeStaff();
+      toast("You are now an admin");
+      setTimeout(() => window.location.reload(), 600);
+    } catch (err) { toast(err.message, "err"); setCodeBusy(false); }
   }
 
   async function toggle(d) {
@@ -54,7 +67,14 @@ export default function Doctors() {
         {staff && <button className="btn" onClick={() => { setForm(EMPTY); setError(""); }}><Icon name="plus" />Add doctor</button>}
       </div>
       {!staff && (
-        <div className="notice"><Icon name="lock" />Only admin accounts can add or edit doctors. Ask an admin, or sign in with a staff account (see the README).</div>
+        <div className="notice col">
+          <div className="row"><Icon name="lock" />Only admin accounts can add or edit doctors.</div>
+          <form className="row code-form" onSubmit={becomeAdmin}>
+            <input type="password" required placeholder="Admin code" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} />
+            <button className="btn sm" disabled={codeBusy}>{codeBusy ? "Checking…" : "Become admin"}</button>
+          </form>
+          <span className="hint">Have the admin code? Enter it to unlock doctor management for this account.</span>
+        </div>
       )}
       <div className="searchbox">
         <Icon name="search" />

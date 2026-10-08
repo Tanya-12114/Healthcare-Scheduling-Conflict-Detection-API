@@ -108,6 +108,10 @@ clinic/
    (regular users see the list, read-only).
 3. Optional: `python manage.py seed_doctors` adds 5 sample doctors.
 
+**No terminal?** Set `ADMIN_SIGNUP_CODE=some-long-secret` in `.env` and restart the server. Then any signed-in user can open
+**Doctors**, enter the code under "Become admin", and unlock doctor management. Leave it empty to disable this. Only share the code
+with people you want as admins.
+
 You can also manage everything at `/admin/`. Doctors with appointments can't be deleted; mark them inactive instead.
 To turn an existing user into an admin: `python manage.py shell` then
 `from django.contrib.auth import get_user_model as g; u=g().objects.get(username="asha"); u.is_staff=True; u.save()`

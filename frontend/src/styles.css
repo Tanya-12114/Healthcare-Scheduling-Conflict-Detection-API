@@ -130,3 +130,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:2px s
   .auth{grid-template-columns:1fr;gap:1.5rem}.auth-hero h1{font-size:2.2rem}
   .toasts{left:1rem;right:1rem}
 }
+.notice.col{flex-direction:column;gap:.5rem}
+.notice .row{gap:.6rem;flex-wrap:nowrap}
+.code-form input{max-width:240px;background:#fff}
+.notice .hint{font-size:.85rem;opacity:.85}

@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    BecomeAdminView,
     AppointmentViewSet,
     DashboardView,
     DoctorViewSet,
@@ -17,6 +18,7 @@ router.register("appointments", AppointmentViewSet, basename="appointment")
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="register"),
+    path("auth/become-admin/", BecomeAdminView.as_view(), name="become-admin"),
     path("auth/login/", LoginView.as_view(), name="login"),
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("", include(router.urls)),

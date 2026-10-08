@@ -1,3 +1,6 @@
+import hmac
+
+from django.conf import settings
 from django.db.models import Count
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
@@ -6,6 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .filters import AppointmentFilter
@@ -57,6 +61,28 @@ class LoginView(ObtainAuthToken):
                 },
             }
         )
+
+
+class BecomeAdminView(APIView):
+    """Promote the signed-in user to admin (staff) if they send the correct ADMIN_SIGNUP_CODE."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "admin_code"
+
+    def post(self, request):
+        configured = settings.ADMIN_SIGNUP_CODE
+        if not configured:
+            return Response(
+                {"detail": "Admin sign-up is not enabled. Set ADMIN_SIGNUP_CODE on the server."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        supplied = str(request.data.get("code", ""))
+        if not hmac.compare_digest(supplied.encode(), configured.encode()):
+            return Response({"detail": "Incorrect admin code."}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        return Response({"is_staff": True})
 
 
 class OwnedQuerysetMixin:
