@@ -6,7 +6,7 @@ and each user can only see their own data.
 
 ## Tech stack
 Python · Django · Django REST Framework · PostgreSQL (SQLite for local dev) · Token authentication ·
-django-filter · django-cors-headers · WhiteNoise + Gunicorn · GitHub Actions
+django-filter · django-cors-headers · WhiteNoise + Gunicorn · React + Vite · Docker Compose · GitHub Actions
 
 ## Features
 - **Auth:** register / login with token authentication, password validation, unique emails
@@ -20,20 +20,66 @@ django-filter · django-cors-headers · WhiteNoise + Gunicorn · GitHub Actions
   - cancelled slots become bookable again
 - **Dashboard:** patient count, today's appointments, counts by status, next 5 upcoming
 - Pagination, search, filtering (`status`, `doctor`, `patient`, `date_from`, `date_to`) and ordering
-- 30 automated tests, run in CI on every push
+- 33 automated tests, run in CI on every push
 
-## Setup
+## Quick start
+
+The project has two parts that must both be running: the **Django API** (port 8000) and the **React frontend** (port 5173).
+Pick whichever way suits you.
+
+### Option 1: Docker (one command)
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) to be running.
+```bash
+cp .env.example .env              # first time only, then edit values (Windows: copy .env.example .env)
+docker compose up --build         # later runs: docker compose up
+docker compose up                 # starts a little faster
+```
+Open `http://localhost:5173`. The API is at `http://localhost:8000/api/`.
+
+- Your code is mounted into the containers, so edits reload automatically.
+- The SQLite database (`db.sqlite3`) stays in the project folder, so data survives restarts.
+- Stop with `Ctrl+C` or `docker compose down`. If you edit `.env`, run `docker compose restart api`.
+- Run Django commands inside the container:
+  ```bash
+  docker compose exec api python manage.py createsuperuser
+  docker compose exec api python manage.py seed_doctors
+  docker compose exec api python manage.py test
+  ```
+- Stop any locally running `runserver` / `npm run dev` first, since they use the same ports.
+- Leave `DATABASE_URL` empty in `.env` to use SQLite. A Postgres on `localhost` is not reachable from inside the container.
+
+### Option 2: One command without Docker
+First do the [manual setup](#option-3-manual-two-terminals) once (virtual environment named `venv`, `pip install`, `migrate`). Then:
+
+| How | Command |
+|---|---|
+| **Windows, double-click** | `start.bat` (installs frontend packages if needed, starts both servers, opens the browser) |
+| **One terminal** | `npm run setup` once, then `npm run dev` (needs Node.js; logs of both servers appear together) |
+| **VS Code** | Press `Ctrl+Shift+B` (runs the "Start CarePoint" task from `.vscode/tasks.json`) |
+
+`package.json` and `start.bat` expect the virtual environment in a folder named `venv` (Windows layout: `venv/Scripts/python.exe`).
+
+### Option 3: Manual (two terminals)
+**Terminal 1: backend**
 ```bash
 python -m venv venv && source venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                                 # then edit values
 python manage.py migrate
-python manage.py createsuperuser                     # optional: needed to add doctors via API/admin
+python manage.py createsuperuser                     # optional: see "Adding doctors and patients"
 python manage.py runserver
 ```
 API runs at `http://localhost:8000/api/`. Admin panel at `/admin/`.
 
-To use **PostgreSQL**, set `DATABASE_URL=postgres://user:password@localhost:5432/carepoint` in `.env`.
+**Terminal 2: frontend**
+```bash
+cd frontend
+cp .env.example .env      # VITE_API_URL=http://localhost:8000/api
+npm install
+npm run dev               # http://localhost:5173
+```
+
+To use **PostgreSQL**, set `DATABASE_URL=postgres://user:password@localhost:5432/carepoint` in `.env` (not with the Docker setup above unless the database is reachable from the container).
 
 ## Endpoints
 | Method | Endpoint | Description |
@@ -69,7 +115,8 @@ curl "localhost:8000/api/appointments/?status=scheduled&date_from=2030-01-01" -H
 
 ## Tests
 ```bash
-DEBUG=True python manage.py test      # Windows PowerShell: $env:DEBUG="True"; python manage.py test
+DEBUG=True python manage.py test      # Docker: docker compose exec api python manage.py test
+                                      # Windows PowerShell: $env:DEBUG="True"; python manage.py test
 ```
 
 ## Project structure
@@ -81,7 +128,10 @@ clinic/
 ├── views.py         viewsets, status actions, dashboard
 ├── permissions.py   IsAdminOrReadOnly
 ├── filters.py       appointment filters
-└── tests/           30 tests
+└── tests/           33 tests
+frontend/          React + Vite app
+Dockerfile, docker-compose.yml   run API + frontend with one command
+start.bat, package.json          one-command alternatives without Docker
 ```
 
 ## Deployment (e.g. Render)
@@ -103,12 +153,12 @@ clinic/
 **Patients** (any user): sign in, open **Patients**, click **Add patient**. Each user only sees the patients they created.
 
 **Doctors** (admin only): doctors are shared by everyone, so only staff accounts can add or edit them.
-1. Create an admin once: `python manage.py createsuperuser`
+1. Create an admin once: `python manage.py createsuperuser` (with Docker: `docker compose exec api python manage.py createsuperuser`)
 2. Sign in to the web app with that account. A **Doctors** page with an **Add doctor** button appears
    (regular users see the list, read-only).
-3. Optional: `python manage.py seed_doctors` adds 5 sample doctors.
+3. Optional: `python manage.py seed_doctors` adds 5 sample doctors (with Docker: `docker compose exec api python manage.py seed_doctors`).
 
-**No terminal?** Set `ADMIN_SIGNUP_CODE=some-long-secret` in `.env` and restart the server. Then any signed-in user can open
+**No terminal?** Set `ADMIN_SIGNUP_CODE=some-long-secret` in `.env` and restart the server (Docker: `docker compose restart api`). Then any signed-in user can open
 **Doctors**, enter the code under "Become admin", and unlock doctor management. Leave it empty to disable this. Only share the code
 with people you want as admins.
 
@@ -117,12 +167,8 @@ To turn an existing user into an admin: `python manage.py shell` then
 `from django.contrib.auth import get_user_model as g; u=g().objects.get(username="asha"); u.is_staff=True; u.save()`
 
 ## Frontend (React + Vite)
-```bash
-cd frontend
-cp .env.example .env      # VITE_API_URL=http://localhost:8000/api
-npm install
-npm run dev               # http://localhost:5173
-```
+Lives in `frontend/`. Start it with any option under [Quick start](#quick-start).
+
 Pages: login/register, dashboard, patients, doctors, appointments. Forms open in dialogs, destructive actions ask for
 confirmation, and booking conflicts from the API are shown inline.
 For production, set `CORS_ALLOWED_ORIGINS` on the backend to your frontend URL, and `VITE_API_URL` on the frontend to the backend URL.
