@@ -1,0 +1,29 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app                    # live code + keeps your existing db.sqlite3
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DEBUG: "True"
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - web_node_modules:/app/node_modules   # keeps Linux packages separate from your Windows ones
+    environment:
+      CHOKIDAR_USEPOLLING: "true"            # makes hot-reload work on Windows
+    depends_on:
+      - api
+
+volumes:
+  web_node_modules:
